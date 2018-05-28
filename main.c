@@ -19,13 +19,15 @@ int main(int argc, char* argv[])
     int frame_no;
     int size, luma_size, chroma_size;
     int height, width, frame_num;
-    float y = 0.0, u = 0.0, v = 0.0;
+    float y = 0.0, u = 0.0, v = 0.0, all = 0.0;
     buf1=NULL;
     buf2=NULL;
     if (argc!=7)
     {
+		printf("%s\n",argv[1]);
         printf("invalid input parameter!\n\n");
         printf("help: Format example\nPSNR.exe ref.yuv input.yuv output.txt width height frame_num\n");
+		getchar();
         return 0;
     }
     
@@ -84,19 +86,22 @@ int main(int argc, char* argv[])
         y += psnr(buf1, buf2, luma_size);
         u += psnr(buf1 + luma_size, buf2 + luma_size, chroma_size);
         v += psnr(buf1 + luma_size + chroma_size, buf2 + luma_size + chroma_size, chroma_size);
+		all += psnr(buf1, buf2, size);
     }
     
     printf("\n");
     printf(" =================================================\n");
-    printf(" PSNR-Y : %.4f \n", y/frame_num);
-    printf(" PSNR-U : %.4f \n", u/frame_num);
-    printf(" PSNR-V : %.4f \n", v/frame_num);
+    printf(" PSNR-Y : %.2f \n", y/frame_num);
+    printf(" PSNR-U : %.2f \n", u/frame_num);
+    printf(" PSNR-V : %.2f \n", v/frame_num);
+	printf(" PSNR-ALL:%.2f \n", all/frame_num);
     fprintf(out_file, "%s\t%s\t", argv[1], argv[2]);
-    fprintf(out_file, "%.4f\t%.4f\t%.4f\n", y/frame_num, u/frame_num, v/frame_num);
+    fprintf(out_file, "%.2f\t%.2f\t%.2f\t%.2f\n", y/frame_num, u/frame_num, v/frame_num, all/frame_num);
     printf(" Results are written to %s\n", argv[3]);
     printf(" =================================================\n");
     
     mReturn();
+
     return 0;
 }
 
