@@ -1,4 +1,4 @@
-//
+﻿//
 //  main.c
 //  PSNR
 //
@@ -7,8 +7,89 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdint.h>
 
-#define uint8_t unsigned char
+#include "bmp.h"
+#include "psnr.h"
+
+int bmp_psnr(int argc, char* argv[])
+{
+    if (argc < 3) {
+        printf("%s\n", argv[1]);
+        printf("invalid input parameter!\n\n");
+        printf("help: Format example\nPSNR.exe ref.bmp input.bmp [a_calc(0/1) upside_down(0/1)]\n");
+        getchar();
+        return -1;
+    }
+    char* ref_filename = argv[1];
+    char* input_filename = argv[2];
+    /* RGBA的A算不算 */
+    int a_calc = 0;
+    if (argc > 3)
+        a_calc = atoi(argv[3]);
+    /* ref和input是不是相互上下颠倒的 */
+    int upside_down = 0;
+    if (argc > 4)
+        upside_down = atoi(argv[4]);
+
+
+    int ret = 0;
+    float psnr = 0;
+    uint8_t* ref_buf = NULL;
+    uint8_t* input_buf = NULL;
+    BITMAPINFOHEADER ref_info, input_info;
+    /* 读取bmp数据 */
+    ret = bmp_get(ref_filename, &ref_buf, &ref_info);
+    if (ret) {
+        printf("cannot open input file:%s\n", ref_filename);
+        goto bmp_psnr_end;
+    }
+    ret = bmp_get(input_filename, &input_buf, &input_info);
+    if (ret) {
+        printf("cannot open input file:%s\n", input_filename);
+        goto bmp_psnr_end;
+    }
+
+    /* 检查两张图的输入是否正确 */
+    if (ref_info.biWidth != input_info.biWidth || ref_info.biHeight != input_info.biHeight) {
+        printf("ref(%dx%d)!=input(%dx%d)\n",
+            ref_info.biWidth, ref_info.biHeight, input_info.biWidth, input_info.biHeight);
+        ret = -1;
+        goto bmp_psnr_end;
+    }
+    int width = ref_info.biWidth;
+    int height = ref_info.biHeight;
+    if (ref_info.biBitCount == 24 && input_info.biBitCount == 24 && upside_down == 0) {
+        psnr = iqa_psnr(ref_buf, input_buf, width * 3, height, width * 3);
+    }
+    else {
+        /* 确保输入图都转成RGBA */
+        if (ref_info.biBitCount == 24) {
+            bmp_24to32(&ref_buf, &ref_info);
+        }
+        if (input_info.biBitCount == 24) {
+            bmp_24to32(&input_buf, &input_info);
+        }
+
+        if (ref_info.biBitCount != 32 || input_info.biBitCount != 32) {
+            printf("biBitCount:ref=%d,input=%d, not support\n", ref_info.biBitCount, input_info.biBitCount);
+            ret = -1;
+            goto bmp_psnr_end;
+        }
+
+        /* 计算psnr */
+        psnr = RGBA_psnr(ref_buf, input_buf, width, height, width * 4, a_calc, upside_down);
+    }
+
+    /* 输出psnr */
+    printf("psnr=%.2f\n", psnr);
+
+bmp_psnr_end:
+    if (ref_buf) free(ref_buf);
+    if (input_buf) free(input_buf);
+    return ret;
+}
+
 float psnr(uint8_t* p1, uint8_t* p2, int size);
 void mReturn(void);
 uint8_t * buf1, *buf2;
@@ -16,6 +97,12 @@ FILE* in_file1, *in_file2, *out_file;
 
 int main(int argc, char* argv[])
 {
+    if (strstr(argv[1], ".bmp")) {
+        /* bmp的psnr对比 */
+        return bmp_psnr(argc, argv);
+    }
+
+    /* yuv420的psnr对比 */
     int frame_no;
     int size, luma_size, chroma_size;
     int height, width, frame_num;
@@ -24,10 +111,10 @@ int main(int argc, char* argv[])
     buf2=NULL;
     if (argc!=7)
     {
-		printf("%s\n",argv[1]);
+        printf("%s\n",argv[1]);
         printf("invalid input parameter!\n\n");
         printf("help: Format example\nPSNR.exe ref.yuv input.yuv output.txt width height frame_num\n");
-		getchar();
+        getchar();
         return 0;
     }
     
@@ -86,7 +173,7 @@ int main(int argc, char* argv[])
         y += psnr(buf1, buf2, luma_size);
         u += psnr(buf1 + luma_size, buf2 + luma_size, chroma_size);
         v += psnr(buf1 + luma_size + chroma_size, buf2 + luma_size + chroma_size, chroma_size);
-		all += psnr(buf1, buf2, size);
+        all += psnr(buf1, buf2, size);
     }
     
     printf("\n");
@@ -94,7 +181,7 @@ int main(int argc, char* argv[])
     printf(" PSNR-Y : %.2f \n", y/frame_num);
     printf(" PSNR-U : %.2f \n", u/frame_num);
     printf(" PSNR-V : %.2f \n", v/frame_num);
-	printf(" PSNR-ALL:%.2f \n", all/frame_num);
+    printf(" PSNR-ALL:%.2f \n", all/frame_num);
     fprintf(out_file, "%s\t%s\t", argv[1], argv[2]);
     fprintf(out_file, "%.2f\t%.2f\t%.2f\t%.2f\n", y/frame_num, u/frame_num, v/frame_num, all/frame_num);
     printf(" Results are written to %s\n", argv[3]);
