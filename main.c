@@ -15,10 +15,10 @@
 int bmp_psnr(int argc, char* argv[])
 {
     if (argc < 3) {
-        printf("%s\n", argv[1]);
+        printf("%s\n", argv[0]);
         printf("invalid input parameter!\n\n");
         printf("help: Format example\nPSNR.exe ref.bmp input.bmp [a_calc(0/1) upside_down(0/1)]\n");
-        getchar();
+        //getchar();
         return -1;
     }
     char* ref_filename = argv[1];
@@ -97,7 +97,7 @@ FILE* in_file1, *in_file2, *out_file;
 
 int main(int argc, char* argv[])
 {
-    if (strstr(argv[1], ".bmp")) {
+    if (argc > 2 && strstr(argv[1], ".bmp")) {
         /* bmp的psnr对比 */
         return bmp_psnr(argc, argv);
     }
@@ -111,10 +111,10 @@ int main(int argc, char* argv[])
     buf2=NULL;
     if (argc!=7)
     {
-        printf("%s\n",argv[1]);
+        printf("%s\n",argv[0]);
         printf("invalid input parameter!\n\n");
         printf("help: Format example\nPSNR.exe ref.yuv input.yuv output.txt width height frame_num\n");
-        getchar();
+        //getchar();
         return 0;
     }
     
